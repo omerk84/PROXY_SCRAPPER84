@@ -1,0 +1,616 @@
+import time
+import re
+from typing import Callable, List, Set, Any, TypeVar, Optional
+from seleniumbase import BaseCase
+from seleniumbase import SB
+from selenium.webdriver.remote.webelement import WebElement
+import helper.turnstile as turnstile
+import fasteners
+from contextlib import suppress
+from seleniumbase import config as sb_config
+from seleniumbase.fixtures import constants
+from seleniumbase.fixtures import js_utils
+from seleniumbase.fixtures import page_actions
+from seleniumbase.core.browser_launcher import _uc_gui_click_x_y, __is_cdp_swap_needed, _on_a_cf_turnstile_page, _on_a_g_recaptcha_page, IS_LINUX, get_gui_element_position, IS_WINDOWS, get_configured_pyautogui, install_pyautogui_if_missing  
+
+def _extract_proxies_from_html(sb: BaseCase, verbose: bool = False) -> Set[str]:
+    """
+    Extracts proxies from spys.one using a three-tiered approach.
+    1. Tries the original fast regex.
+    2. Tries a new regex for a known alternative HTML structure.
+    3. Falls back to a robust but slower rendered-text parsing method.
+    """
+    proxies = set()
+    html_content = sb.get_page_source()
+
+    # --- Attempt 1: Original Fast Regex ---
+    if verbose:
+        print("[DEBUG] Spys.one: Attempting primary extraction method (Original Regex)...")
+    pattern_original = r'<font class="spy14">(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})<script>.*?</script>:(\d+)</font>'
+    try:
+        matches = re.findall(pattern_original, html_content, re.DOTALL)
+        if matches:
+            for ip, port in matches:
+                proxies.add(f"{ip}:{port}")
+            if verbose:
+                print(f"[DEBUG] Spys.one: Primary method successful. Found {len(proxies)} proxies.")
+            return proxies
+    except Exception as e:
+        if verbose:
+            print(f"[DEBUG] Spys.one: Original Regex method encountered an error: {e}")
+
+    # --- Attempt 2: New Regex for the alternative structure ---
+    if verbose:
+        print("[DEBUG] Spys.one: Original Regex failed. Attempting secondary method (New Regex)...")
+    # This pattern matches the structure: <font>IP<script/> <font>:</font>PORT</font>
+    pattern_new = r'<font class="spy14">(\d{1,3}(?:\.\d{1,3}){3})<script.*?</script>\s*<font class="spy2">:</font>(\d+)</font>'
+    try:
+        matches = re.findall(pattern_new, html_content, re.DOTALL)
+        if matches:
+            for ip, port in matches:
+                proxies.add(f"{ip}:{port}")
+            if verbose:
+                print(f"[DEBUG] Spys.one: Secondary (New Regex) method successful. Found {len(proxies)} proxies.")
+            return proxies
+    except Exception as e:
+        if verbose:
+            print(f"[DEBUG] Spys.one: New Regex method encountered an error: {e}")
+
+    # --- Attempt 3 (Fallback): Robust Rendered Text Parsing ---
+    if verbose:
+        print("[INFO] Spys.one: Both Regex methods failed. Falling back to tertiary method (rendered text)...")
+    try:
+        proxy_rows = sb.find_elements("tr.spy1x, tr.spy1xx")
+        if not proxy_rows and verbose:
+            print("[WARN] Spys.one Fallback: Could not find any proxy table rows (tr.spy1x, tr.spy1xx).")
+
+        for row in proxy_rows:
+            try:
+                first_cell = row.find_element("css selector", "td:first-child")
+                proxy_string = first_cell.text.strip()
+                if ":" in proxy_string and "." in proxy_string:
+                    proxies.add(proxy_string)
+            except Exception as e_inner:
+                if verbose:
+                    print(f"[DEBUG] Spys.one Fallback: Could not parse a row. Error: {e_inner}")
+                continue
+
+        if verbose:
+            print(f"[DEBUG] Spys.one: Fallback method found {len(proxies)} proxies.")
+
+    except Exception as e:
+        if verbose:
+            print(f"[ERROR] Spys.one: The fallback extraction method failed critically. Error: {e}")
+
+    return proxies
+def _handle_turnstile(sb: BaseCase, verbose: bool, callable_after_page_reload: Callable=None):
+    if turnstile.is_turnstile_present(sb, 10):
+        if verbose: print("[INFO] Spys.one: Cloudflare challenge detected. Solving...")
+        _uc_gui_click_captcha(sb, callable_after_page_reload=callable_after_page_reload, verbose=verbose)
+
+        sb.wait_for_element_present('body > table:nth-child(3)', timeout=20)
+        if verbose: print("[SUCCESS] Spys.one: Challenge solved.")
+
+def scrape_from_spysone(sb: BaseCase, verbose: bool = False, turnstile_delay: float = 0) -> List[str]:
+    """
+    Scrapes spys.one using automation browser for all pages.
+    Compatible with Windows and Linux on Python 3.12.9.
+    """
+    if verbose:
+        print("[RUNNING] 'Spys.one' automation scraper has started.")
+
+    all_proxies = set()
+    base_url = "https://spys.one/en/"
+    MAX_RETRIES = 3
+    RETRY_DELAY = 10
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            if verbose and attempt > 1:
+                print(f"[RETRY] Spys.one: Attempt {attempt}/{MAX_RETRIES} to access {base_url}...")
+
+            if verbose: print(f"[INFO] Spys.one: Navigating to {base_url}...")
+            sb.open(base_url)
+            sb.ad_block()
+
+            if "403" in sb.get_title() or "Forbidden" in sb.get_page_source()[:500]:
+                raise Exception("HTTP 403 Forbidden detected")
+
+            break
+        except Exception as e:
+            if attempt < MAX_RETRIES:
+                if verbose:
+                    print(f"[WARN] Spys.one: Failed to access page (attempt {attempt}/{MAX_RETRIES}): {e}")
+                    print(f"[RETRY] Waiting {RETRY_DELAY}s before retry...")
+                time.sleep(RETRY_DELAY)
+            else:
+                if verbose:
+                    print(f"[ERROR] Spys.one: Failed to access {base_url} after {MAX_RETRIES} attempts")
+                return sorted(list(all_proxies))
+
+    try:
+        # Check and solve initial turnstile challenge
+        _handle_turnstile(sb, verbose=verbose)
+
+        try:
+            time.sleep(0.5)
+            sb.find_element("button.fc-primary-button[aria-label='Consent']", timeout=6).click()
+        except Exception as e:
+            print("An exception occurred while trying to find and click the cookie consent button.")
+            print(e)
+
+        # Extract proxies from initial page using the new combined method
+        initial_proxies = _extract_proxies_from_html(sb, verbose)
+        all_proxies.update(initial_proxies)
+        if verbose: print(f"[INFO] Spys.one: Found {len(initial_proxies)} proxies on initial page.")
+
+        try:
+            time.sleep(0.5)
+            sb.open("https://spys.one/en/free-proxy-list/")
+            sb.wait_for_ready_state_complete(timeout=10)
+            sb.ad_block()
+            time.sleep(0.3)
+
+            try:
+                sb.js_click('#dismiss-button', all_matches=True, timeout=1)
+                time.sleep(0.2)
+            except Exception as e:
+                print("[WARNING] Not found an optional dismiss button, but that's fine (#dismiss-button)")
+            sb.wait_for_element_present('body > table:nth-child(3)', timeout=20)
+        except Exception as e:
+            print("An exception occurred while trying to find and click the Proxy search button.")
+            print(e)
+        
+        # Define all page configurations to visit
+        # page_configs = [
+        #     {'xpp': '5', 'xf1': '0', 'xf2': '0', 'xf4': '0', 'xf5': '0'}, # All types
+        #     {'xpp': '5', 'xf1': '0', 'xf2': '0', 'xf4': '0', 'xf5': '2'}, # SOCKS
+        #     {'xpp': '5', 'xf1': '1', 'xf2': '0', 'xf4': '0', 'xf5': '1'}, # HTTP - ANM+HIA
+        #     {'xpp': '5', 'xf1': '2', 'xf2': '0', 'xf4': '0', 'xf5': '1'}, # HTTP - NOA
+        #     {'xpp': '5', 'xf1': '3', 'xf2': '0', 'xf4': '0', 'xf5': '1'}, # HTTP - ANM
+        #     {'xpp': '5', 'xf1': '4', 'xf2': '0', 'xf4': '0', 'xf5': '1'}, # HTTP - HIA
+        # ]
+        page_configs = [
+            {'xpp': '5'}, # All types
+            {'xpp': '5'}, # All types
+
+        ]
+        
+        # Process each configuration
+        for i, config in enumerate(page_configs):
+            if verbose:
+                print(f"[INFO] Spys.one: Processing configuration {i+1}/{len(page_configs)}: {config}")
+
+            try:
+                # sb.execute_script("""
+                #     document.querySelectorAll('select.clssel').forEach(function(select) {
+                #         select.removeAttribute('onchange');
+                #     });
+                # """)
+                
+                
+                for dropdown_id, value in config.items():
+                    
+                    def callable_after_page_reload():
+                        sb.ad_block()
+                        sb.get_element(f'#{dropdown_id}', timeout=5).click()
+                        sb.select_option_by_value(f'#{dropdown_id}', value, timeout=5)
+                        time.sleep(0.5)  # Small delay for JS to react
+                        if verbose: print(f"[INFO] Spysone: Applying dropdown selection: {dropdown_id} -> {value}")
+                    callable_after_page_reload()
+                    # time.sleep(3)
+                    _handle_turnstile(sb, verbose=verbose, callable_after_page_reload=callable_after_page_reload)
+
+
+                # sb.execute_script("""
+                #     var forms = document.querySelectorAll('form');
+                #     if (forms.length > 0) {
+                #         forms[0].submit();
+                #     }
+                # """)
+                
+                # Wait for page load
+                
+                # Check for turnstile after form submission
+
+                sb.wait_for_element_present('body > table:nth-child(3)', timeout=20)
+                
+                # Extract proxies from current page
+                new_proxies = _extract_proxies_from_html(sb, verbose)
+                if len(new_proxies) <= 0:
+                    filename = "spysone-error-no-proxies.html"
+                    print("[ERROR] Spy.one: No proxies found on the page, assuming something went wrong. Saving the page content to " + filename)
+                    with open(filename, 'w', encoding='utf-8') as f:
+                        f.write(sb.get_page_source())
+
+                # Calculate newly found unique proxies
+                before_count = len(all_proxies)
+                all_proxies.update(new_proxies)
+                newly_added = len(all_proxies) - before_count
+
+                if verbose:
+                    print(f"[INFO]   ... Found {len(new_proxies)} proxies, {newly_added} new unique. Total: {len(all_proxies)}")
+
+                # Be respectful between page loads
+                time.sleep(3)
+                
+            except Exception as e:
+                if verbose:
+                    print(f"[ERROR] Failed to process configuration {i+1}: {e}")
+                continue
+
+    except Exception as e:
+        if verbose:
+            print(f"[ERROR] A critical exception occurred in Spys.one scraper: {e}")
+
+    if verbose:
+        print(f"[INFO] Spys.one: Finished. Found a total of {len(all_proxies)} unique proxies.")
+    
+    return sorted(list(all_proxies))
+
+
+
+
+
+
+
+
+def _uc_gui_click_captcha(
+    sb: BaseCase,
+    frame="iframe",
+    retry=False,
+    blind=False,
+    ctype=None,
+    callable_after_page_reload: Callable=None,
+    verbose: bool=False
+):
+    driver = sb.driver
+    cdp_mode_on_at_start = __is_cdp_swap_needed(driver)
+    _on_a_captcha_page = None
+    if ctype == "cf_t":
+        if not _on_a_cf_turnstile_page(driver):
+            return
+        else:
+            _on_a_captcha_page = _on_a_cf_turnstile_page
+    elif ctype == "g_rc":
+        if not _on_a_g_recaptcha_page(driver):
+            return
+        else:
+            _on_a_captcha_page = _on_a_g_recaptcha_page
+    else:
+        if _on_a_g_recaptcha_page(driver):
+            ctype = "g_rc"
+            _on_a_captcha_page = _on_a_g_recaptcha_page
+        elif _on_a_cf_turnstile_page(driver):
+            ctype = "cf_t"
+            _on_a_captcha_page = _on_a_cf_turnstile_page
+        else:
+            return
+    install_pyautogui_if_missing(driver)
+    import pyautogui
+    pyautogui = get_configured_pyautogui(pyautogui)
+    i_x = None
+    i_y = None
+    x = None
+    y = None
+    visible_iframe = True
+    gui_lock = fasteners.InterProcessLock(
+        constants.MultiBrowser.PYAUTOGUILOCK
+    )
+    with gui_lock:  # Prevent issues with multiple processes
+        needs_switch = False
+        width_ratio = 1.0
+        is_in_frame = js_utils.is_in_frame(driver)
+        if is_in_frame and driver.is_element_present("#challenge-stage"):
+            driver.switch_to.parent_frame()
+            needs_switch = True
+            is_in_frame = js_utils.is_in_frame(driver)
+        if not is_in_frame:
+            # Make sure the window is on top
+            if __is_cdp_swap_needed(driver):
+                driver.cdp.bring_active_window_to_front()
+            else:
+                page_actions.switch_to_window(
+                    driver, driver.current_window_handle, 2, uc_lock=False
+                )
+        if IS_WINDOWS and not __is_cdp_swap_needed(driver):
+            window_rect = driver.get_window_rect()
+            width = window_rect["width"]
+            height = window_rect["height"]
+            win_x = window_rect["x"]
+            win_y = window_rect["y"]
+            scr_width = pyautogui.size().width
+            driver.maximize_window()
+            win_width = driver.get_window_size()["width"]
+            width_ratio = round(float(scr_width) / float(win_width), 2) + 0.01
+            if width_ratio < 0.45 or width_ratio > 2.55:
+                width_ratio = 1.01
+            sb_config._saved_width_ratio = width_ratio
+            driver.minimize_window()
+            driver.set_window_rect(win_x, win_y, width, height)
+        elif IS_WINDOWS and __is_cdp_swap_needed(driver):
+            window_rect = driver.cdp.get_window_rect()
+            width = window_rect["width"]
+            height = window_rect["height"]
+            win_x = window_rect["x"]
+            win_y = window_rect["y"]
+            scr_width = pyautogui.size().width
+            driver.cdp.maximize()
+            win_width = driver.cdp.get_window_size()["width"]
+            width_ratio = round(float(scr_width) / float(win_width), 2) + 0.01
+            if width_ratio < 0.45 or width_ratio > 2.55:
+                width_ratio = 1.01
+            sb_config._saved_width_ratio = width_ratio
+            driver.cdp.minimize()
+            driver.cdp.set_window_rect(win_x, win_y, width, height)
+        if ctype == "cf_t":
+            if (
+                driver.is_element_present(".cf-turnstile-wrapper iframe")
+                or driver.is_element_present(
+                    '[data-callback="onCaptchaSuccess"] iframe'
+                )
+            ):
+                pass
+            else:
+                visible_iframe = False
+                if (
+                    frame != "iframe"
+                    and driver.is_element_present(
+                        "%s .cf-turnstile-wrapper" % frame
+                    )
+                ):
+                    frame = "%s .cf-turnstile-wrapper" % frame
+                elif (
+                    frame != "iframe"
+                    and driver.is_element_present(
+                        '%s [name*="cf-turnstile"]' % frame
+                    )
+                    and driver.is_element_present("%s div" % frame)
+                ):
+                    frame = "%s div" % frame
+                elif (
+                    driver.is_element_present('[name*="cf-turnstile-"]')
+                    and driver.is_element_present("#challenge-form div > div")
+                ):
+                    frame = "#challenge-form div > div"
+                elif (
+                    driver.is_element_present('[name*="cf-turnstile-"]')
+                    and driver.is_element_present(
+                        '[style="display: grid;"] div div'
+                    )
+                ):
+                    frame = '[style="display: grid;"] div div'
+                elif (
+                    driver.is_element_present('[name*="cf-turnstile-"]')
+                    and driver.is_element_present("[class*=spacer] + div div")
+                ):
+                    frame = '[class*=spacer] + div div'
+                elif (
+                    driver.is_element_present('[name*="cf-turnstile-"]')
+                    and driver.is_element_present("div.spacer div")
+                ):
+                    frame = "div.spacer div"
+                elif (
+                    driver.is_element_present('script[src*="challenges.c"]')
+                    and driver.is_element_present(
+                        '[data-testid*="challenge-"] div'
+                    )
+                ):
+                    frame = '[data-testid*="challenge-"] div'
+                elif driver.is_element_present(
+                    "div#turnstile-widget div:not([class])"
+                ):
+                    frame = "div#turnstile-widget div:not([class])"
+                elif driver.is_element_present(
+                    'form div:not([class]):has(input[name*="cf-turn"])'
+                ):
+                    frame = 'form div:not([class]):has(input[name*="cf-turn"])'
+                elif (
+                    driver.is_element_present('[src*="/turnstile/"]')
+                    and driver.is_element_present("form div:not(:has(*))")
+                ):
+                    frame = "form div:not(:has(*))"
+                elif (
+                    driver.is_element_present('[src*="/turnstile/"]')
+                    and driver.is_element_present(
+                        "body > div#check > div:not([class])"
+                    )
+                ):
+                    frame = "body > div#check > div:not([class])"
+                elif driver.is_element_present(".cf-turnstile-wrapper"):
+                    frame = ".cf-turnstile-wrapper"
+                elif driver.is_element_present('[class="cf-turnstile"]'):
+                    frame = '[class="cf-turnstile"]'
+                elif driver.is_element_present(
+                    '[data-callback="onCaptchaSuccess"]'
+                ):
+                    frame = '[data-callback="onCaptchaSuccess"]'
+                else:
+                    return
+            if (
+                driver.is_element_present("form")
+                and (
+                    driver.is_element_present('form[class*="center"]')
+                    or driver.is_element_present('form[class*="right"]')
+                    or driver.is_element_present('form div[class*="center"]')
+                    or driver.is_element_present('form div[class*="right"]')
+                )
+            ):
+                script = (
+                    """var $elements = document.querySelectorAll(
+                    'form[class], form div[class]');
+                    var index = 0, length = $elements.length;
+                    for(; index < length; index++){
+                    the_class = $elements[index].getAttribute('class');
+                    new_class = the_class.replaceAll('center', 'left');
+                    new_class = new_class.replaceAll('right', 'left');
+                    $elements[index].setAttribute('class', new_class);}"""
+                )
+                if __is_cdp_swap_needed(driver):
+                    driver.cdp.evaluate(script)
+                else:
+                    driver.execute_script(script)
+            elif (
+                driver.is_element_present("form")
+                and (
+                    driver.is_element_present('form div[style*="center"]')
+                    or driver.is_element_present('form div[style*="right"]')
+                )
+            ):
+                script = (
+                    """var $elements = document.querySelectorAll(
+                    'form[style], form div[style]');
+                    var index = 0, length = $elements.length;
+                    for(; index < length; index++){
+                    the_style = $elements[index].getAttribute('style');
+                    new_style = the_style.replaceAll('center', 'left');
+                    new_style = new_style.replaceAll('right', 'left');
+                    $elements[index].setAttribute('style', new_style);}"""
+                )
+                if __is_cdp_swap_needed(driver):
+                    driver.cdp.evaluate(script)
+                else:
+                    driver.execute_script(script)
+            elif (
+                driver.is_element_present("form")
+                and driver.is_element_present(
+                    'form [id*="turnstile"] > div:not([class])'
+                )
+            ):
+                script = (
+                    """var $elements = document.querySelectorAll(
+                    'form [id*="turnstile"]');
+                    var index = 0, length = $elements.length;
+                    for(; index < length; index++){
+                    $elements[index].setAttribute('align', 'left');}"""
+                )
+                if __is_cdp_swap_needed(driver):
+                    driver.cdp.evaluate(script)
+                else:
+                    driver.execute_script(script)
+        if not is_in_frame or needs_switch:
+            # Currently not in frame (or nested frame outside CF one)
+            try:
+                i_x, i_y = get_gui_element_position(driver, frame)
+                if visible_iframe:
+                    driver.switch_to_frame(frame)
+            except Exception:
+                if visible_iframe:
+                    if driver.is_element_present("iframe"):
+                        i_x, i_y = get_gui_element_position(driver, "iframe")
+                        if driver.is_connected():
+                            driver.switch_to_frame("iframe")
+                    else:
+                        return
+            if not i_x or not i_y:
+                return
+        try:
+            if ctype == "g_rc" and not driver.is_connected():
+                x = (i_x + 29) * width_ratio
+                y = (i_y + 35) * width_ratio
+            elif visible_iframe:
+                selector = "span"
+                if ctype == "g_rc":
+                    selector = "span.recaptcha-checkbox"
+                    if not driver.is_connected():
+                        selector = "iframe"
+                element = driver.wait_for_element_present(
+                    selector, timeout=2.5
+                )
+                x = i_x + element.rect["x"] + (element.rect["width"] / 2.0)
+                x += 0.5
+                y = i_y + element.rect["y"] + (element.rect["height"] / 2.0)
+                y += 0.5
+            else:
+                x = (i_x + 32) * width_ratio
+                y = (i_y + 32) * width_ratio
+            if driver.is_connected():
+                driver.switch_to.default_content()
+        except Exception:
+            if driver.is_connected():
+                try:
+                    driver.switch_to.default_content()
+                except Exception:
+                    return
+        if x and y:
+            sb_config._saved_cf_x_y = (x, y)
+            if not __is_cdp_swap_needed(driver):
+                if driver.is_element_present(".footer .clearfix .ray-id"):
+                    if verbose: print("driver.uc_open_with_disconnect(driver.get_current_url(), 3.8)")
+                    driver.uc_open_with_disconnect(driver.get_current_url(), 3.8)
+
+                    # --- The fix for spys.one starts here ---
+                    # After a reload we lose the POST payload, so we need to send the payload again, before we click the captcha (otherwise turnstile doesn't show up)
+                    if verbose: print("callable_after_page_reload() starts now")
+                    if callable_after_page_reload:
+                        if verbose: print("[DEBUG] Spys.one: Re-applying action after captcha solver reloaded page.")
+                        callable_after_page_reload()
+                    if verbose: print("callable_after_page_reload() ends now")
+
+                    # We need to wait for turnstile to reload and become ready again
+                    sb.sleep(6)
+
+                else:
+                    driver.disconnect()
+            with suppress(Exception):
+                _uc_gui_click_x_y(driver, x, y, timeframe=0.32)
+                if __is_cdp_swap_needed(driver):
+                    time.sleep(float(constants.UC.RECONNECT_TIME) / 2.0)
+                    return
+    reconnect_time = (float(constants.UC.RECONNECT_TIME) / 2.0) + 0.6
+    if IS_LINUX:
+        reconnect_time = constants.UC.RECONNECT_TIME + 0.2
+    if not x or not y:
+        reconnect_time = 1  # Make it quick (it already failed)
+    driver.reconnect(reconnect_time)
+    caught = False
+    if (
+        driver.is_element_present(".footer .clearfix .ray-id")
+        and not driver.is_element_visible("#challenge-success-text")
+    ):
+        blind = True
+        caught = True
+    if blind:
+        retry = True
+    if retry and x and y and (caught or _on_a_captcha_page(driver)):
+        with gui_lock:  # Prevent issues with multiple processes
+            # Make sure the window is on top
+            if __is_cdp_swap_needed(driver):
+                driver.cdp.bring_active_window_to_front()
+            else:
+                page_actions.switch_to_window(
+                    driver, driver.current_window_handle, 2, uc_lock=False
+                )
+            if driver.is_element_present("iframe"):
+                try:
+                    driver.switch_to_frame(frame)
+                except Exception:
+                    try:
+                        driver.switch_to_frame("iframe")
+                    except Exception:
+                        return
+                checkbox_success = None
+                if ctype == "cf_t":
+                    checkbox_success = "#success-icon"
+                elif ctype == "g_rc":
+                    checkbox_success = "span.recaptcha-checkbox-checked"
+                else:
+                    return  # If this line is reached, ctype wasn't set
+                if driver.is_element_visible("#success-icon"):
+                    driver.switch_to.parent_frame(checkbox_success)
+                    return
+            if blind:
+                driver.uc_open_with_disconnect(driver.get_current_url(), 3.8)
+                if __is_cdp_swap_needed(driver) and _on_a_captcha_page(driver):
+                    _uc_gui_click_x_y(driver, x, y, timeframe=0.32)
+                else:
+                    time.sleep(0.1)
+            else:
+                driver.uc_open_with_reconnect(driver.get_current_url(), 3.8)
+                if _on_a_captcha_page(driver):
+                    driver.disconnect()
+                    _uc_gui_click_x_y(driver, x, y, timeframe=0.32)
+        if not cdp_mode_on_at_start:
+            driver.reconnect(reconnect_time)
+
+

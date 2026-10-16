@@ -1,0 +1,184 @@
+https://openproxylist.xyz/http.txt
+https://openproxylist.xyz/socks4.txt
+https://openproxylist.xyz/socks5.txt
+
+https://www.socks-proxy.net/
+https://www.us-proxy.org/
+https://www.sslproxies.org/
+https://www.google-proxy.net/
+https://free-proxy-list.net/anonymous-proxy.html
+https://free-proxy-list.net/uk-proxy.html
+https://free-proxy-list.net/
+
+https://geonode.com/free-proxy-list/
+https://spys.me/proxy.txt
+https://spys.me/socks.txt
+https://hidemy.name/en/proxy-list/
+http://pubproxy.com
+https://webanetlabs.net/publ/23
+https://webanetlabs.net/publ/24
+https://webanetlabs.net/publ/28
+https://static.fatezero.org/tmp/proxy.txt
+https://freeproxyupdate.com/
+https://cyber-gateway.net/nfo/333-free-proxy-list-txt
+https://cyber-gateway.net/get-proxy/free-proxy/57-free-proxy-google
+https://cyber-gateway.net/get-proxy/free-proxy/56-free-socks-proxy
+https://cyber-gateway.net/get-proxy/free-proxy/24-free-http-proxy
+https://www.my-proxy.com/free-proxy-list.html
+https://www.my-proxy.com/free-elite-proxy.html
+https://www.my-proxy.com/free-anonymous-proxy.html
+https://www.my-proxy.com/free-transparent-proxy.html
+https://www.my-proxy.com/free-socks-4-proxy.html
+https://www.my-proxy.com/free-socks-5-proxy.html
+https://www.my-proxy.com/free-proxy-list.html
+https://www.my-proxy.com/free-proxy-list-{page}.html
+
+https://ab57.ru/proxylist.html
+https://ab57.ru/downloads/proxyold.txt
+https://ab57.ru/downloads/proxylist.txt
+
+https://raw.githubusercontent.com/TheSpeedX/PROXY-List/refs/heads/master/http.txt
+https://raw.githubusercontent.com/TheSpeedX/PROXY-List/refs/heads/master/socks4.txt
+https://raw.githubusercontent.com/TheSpeedX/PROXY-List/refs/heads/master/socks5.txt
+https://raw.githubusercontent.com/vakhov/fresh-proxy-list/master/proxylist.txt
+https://raw.githubusercontent.com/proxifly/free-proxy-list/main/proxies/all/data.txt
+https://raw.githubusercontent.com/proxifly/free-proxy-list/refs/heads/main/proxies/all/data.txt
+https://cdn.jsdelivr.net/gh/proxifly/free-proxy-list@main/proxies/all/data.txt
+https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt
+https://raw.githubusercontent.com/ymyuuu/IPDB/refs/heads/main/BestProxy/proxy.txt
+https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS5.txt
+https://raw.githubusercontent.com/roosterkid/openproxylist/main/SOCKS4.txt
+https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS.txt
+https://raw.githubusercontent.com/jetkai/proxy-list/refs/heads/main/online-proxies/txt/proxies.txt
+https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/refs/heads/master/http.txt
+https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/refs/heads/master/https.txt
+https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/refs/heads/master/socks4.txt
+https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/refs/heads/master/socks5.txt
+
+https://papaproxy.net/ru/ipv4.php
+https://papaproxy.net/ru/dlya-parsinga.php
+https://papaproxy.net/ru/elite.php
+https://papaproxy.net/ru/anonymous.php
+https://papaproxy.net/ru/socks.php
+https://papaproxy.net/ru/socks4.php
+https://papaproxy.net/ru/socks5.php
+https://papaproxy.net/ru/http.php
+https://papaproxy.net/ru/https.php
+https://papaproxy.net/ru/packet.php
+https://papaproxy.net/ru/packet-ipv4.php
+
+https://premiumproxy.net/full-proxy-list/
+https://fineproxy.org/free-proxy/
+
+# ==============================================================================
+# Verified Fresh Sources (Updated Hourly / Daily - Benchmarked for High Survival)
+# ==============================================================================
+
+# --- Live REST APIs (Instant, Clean JSON & Text) ---
+# Litport Official API (Updated every minute, >70% alive rate)
+https://litport.net/api/free-proxy/snapshot?protocol=http
+https://litport.net/api/free-proxy/snapshot?protocol=socks4
+https://litport.net/api/free-proxy/snapshot?protocol=socks5
+
+# ProxyCompass Live API (Top Pages - 500 proxies per page)
+https://proxycompass.com/api/v1/free-proxies/live?protocol=http&page=1&page_size=500
+https://proxycompass.com/api/v1/free-proxies/live?protocol=http&page=2&page_size=500
+https://proxycompass.com/api/v1/free-proxies/live?protocol=http&page=3&page_size=500
+https://proxycompass.com/api/v1/free-proxies/live?protocol=socks4&page=1&page_size=500
+https://proxycompass.com/api/v1/free-proxies/live?protocol=socks4&page=2&page_size=500
+https://proxycompass.com/api/v1/free-proxies/live?protocol=socks5&page=1&page_size=500
+https://proxycompass.com/api/v1/free-proxies/live?protocol=socks5&page=2&page_size=500
+
+# ProxyWing Official API (Live Text Stream)
+https://proxywing.com/api/free-proxy-list?format=txt
+https://proxywing.com/api/free-proxy-list?protocol=socks4&format=txt
+https://proxywing.com/api/free-proxy-list?protocol=socks5&format=txt
+
+# Proxmint Live API
+https://proxmint.com/api/free-proxies?protocol=socks5&format=txt
+
+# --- Verified GitHub Repositories (Auto-Updated Hourly) ---
+# Thordata Awesome Free Proxy List (Updated Hourly, High Low-Latency Density)
+https://raw.githubusercontent.com/Thordata/awesome-free-proxy-list/main/proxies/top-trusted.txt
+https://raw.githubusercontent.com/Thordata/awesome-free-proxy-list/main/proxies/all.txt
+https://raw.githubusercontent.com/Thordata/awesome-free-proxy-list/main/proxies/socks4.txt
+https://raw.githubusercontent.com/Thordata/awesome-free-proxy-list/main/proxies/socks5.txt
+
+# Databay Labs (Updated Hourly, High-Volume Verified List)
+https://raw.githubusercontent.com/databay-labs/free-proxy-list/master/http.txt
+https://raw.githubusercontent.com/databay-labs/free-proxy-list/master/socks4.txt
+https://raw.githubusercontent.com/databay-labs/free-proxy-list/master/socks5.txt
+
+# TheSpeedX SOCKS-List (Updated Hourly, Dedicated SOCKS4 Feed)
+https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks4.txt
+
+# Hookzof SOCKS5 (Updated Hourly, Massive Verified SOCKS5 Pool)
+https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt
+
+# xyzs996 Health-Checked List (Updated Hourly)
+https://raw.githubusercontent.com/xyzs996/free-proxy-health-list/main/http.txt
+https://raw.githubusercontent.com/xyzs996/free-proxy-health-list/main/socks4.txt
+https://raw.githubusercontent.com/xyzs996/free-proxy-health-list/main/socks5.txt
+
+# Hproxy-com (Updated Hourly)
+https://raw.githubusercontent.com/hproxy-com/free-proxy-list/main/http.txt
+https://raw.githubusercontent.com/hproxy-com/free-proxy-list/main/socks4.txt
+https://raw.githubusercontent.com/hproxy-com/free-proxy-list/main/socks5.txt
+
+# Maximilianfeix (Updated Hourly, Tested High Survival Rate)
+https://raw.githubusercontent.com/maximilianfeix/free-proxy-list/master/http.txt
+https://raw.githubusercontent.com/maximilianfeix/free-proxy-list/master/socks4.txt
+https://raw.githubusercontent.com/maximilianfeix/free-proxy-list/master/socks5.txt
+
+# Dpangestuw (Updated Hourly)
+https://raw.githubusercontent.com/dpangestuw/Free-Proxy/main/http_proxies.txt
+https://raw.githubusercontent.com/dpangestuw/Free-Proxy/main/socks4_proxies.txt
+https://raw.githubusercontent.com/dpangestuw/Free-Proxy/main/socks5_proxies.txt
+
+# VPSLabCloud (Updated Hourly)
+https://raw.githubusercontent.com/VPSLabCloud/VPSLab-Free-Proxy-List/main/http_all.txt
+https://raw.githubusercontent.com/VPSLabCloud/VPSLab-Free-Proxy-List/main/socks4_all.txt
+https://raw.githubusercontent.com/VPSLabCloud/VPSLab-Free-Proxy-List/main/socks5_all.txt
+
+# Proxio-io (Updated Hourly)
+https://raw.githubusercontent.com/proxio-io/proxy-list/main/socks4.txt
+https://raw.githubusercontent.com/proxio-io/proxy-list/main/socks5.txt
+
+# Stormsia (Updated Hourly)
+https://raw.githubusercontent.com/stormsia/proxy-list/main/http.txt
+https://raw.githubusercontent.com/stormsia/proxy-list/main/socks4.txt
+https://raw.githubusercontent.com/stormsia/proxy-list/main/socks5.txt
+
+# Claude89757 (Updated Hourly, Dedicated HTTPS)
+https://raw.githubusercontent.com/claude89757/free_https_proxies/main/https_proxies.txt
+
+# Proxmint GitHub (Updated Hourly)
+https://raw.githubusercontent.com/proxmint/free-proxy-list/main/proxies/http.txt
+https://raw.githubusercontent.com/proxmint/free-proxy-list/main/proxies/socks4.txt
+https://raw.githubusercontent.com/proxmint/free-proxy-list/main/proxies/socks5.txt
+
+# iplocate (Updated Hourly, Low-Latency Anonymous Proxies)
+https://raw.githubusercontent.com/iplocate/free-proxy-list/main/protocols/http.txt
+https://raw.githubusercontent.com/iplocate/free-proxy-list/main/protocols/socks4.txt
+https://raw.githubusercontent.com/iplocate/free-proxy-list/main/protocols/socks5.txt
+
+# Anonym0usWork1221 (Updated Hourly)
+https://raw.githubusercontent.com/Anonym0usWork1221/Free-Proxies/master/proxy_files/socks4_proxies.txt
+https://raw.githubusercontent.com/Anonym0usWork1221/Free-Proxies/master/proxy_files/socks5_proxies.txt
+
+# ProxyGenerator1 (Updated Daily, Stable Feeds)
+https://raw.githubusercontent.com/proxygenerator1/ProxyGenerator/main/Stable/socks4.txt
+https://raw.githubusercontent.com/proxygenerator1/ProxyGenerator/main/Stable/socks5.txt
+
+# sunny9577 / proxy-scraper (Updated Hourly - Unified ALL Proxies Pool)
+https://raw.githubusercontent.com/sunny9577/proxy-scraper/master/proxies.txt
+
+# komutan234 / Proxy-List-Free (Auto-Updated Every 2 Hours)
+https://raw.githubusercontent.com/komutan234/Proxy-List-Free/main/proxies/http.txt
+https://raw.githubusercontent.com/komutan234/Proxy-List-Free/main/proxies/socks4.txt
+https://raw.githubusercontent.com/komutan234/Proxy-List-Free/main/proxies/socks5.txt
+
+# ALIILAPRO / Proxy (Auto-Updated Daily)
+https://raw.githubusercontent.com/ALIILAPRO/Proxy/main/http.txt
+https://raw.githubusercontent.com/ALIILAPRO/Proxy/main/socks4.txt
+https://raw.githubusercontent.com/ALIILAPRO/Proxy/main/socks5.txt
